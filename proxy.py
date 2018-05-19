@@ -35,7 +35,7 @@ def get_good_proxies_by_page(page):
     for proxy in proxies:
         if is_good_proxy(proxy):
             with open(FILE_NAME, 'a') as file_handler:
-                file_handler.write(str(proxy) + '\n')
+                file_handler.write(str(proxy) + ',')
                 print(str(proxy))
                 file_handler.close()
 
@@ -76,6 +76,15 @@ def is_good_proxy(proxy):
     # else:
     #     return True
 
+
+def read_proxies():
+    file_handler = open(FILE_NAME, 'r')
+    proxies_line = file_handler.read()
+    proxies = proxies_line.split(',')
+    proxies.pop()
+    return proxies
+
+
 def main():
     # 单线程 [Finished in 579.6s]
     # for page in range(1, MAX_PAGE):
@@ -106,5 +115,3 @@ def main():
     #             pool.apply_async(get_good_proxies_by_page, args = (page + i,))
     #     pool.close()
     #     pool.join()
-
-main()
