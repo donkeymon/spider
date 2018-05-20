@@ -8,7 +8,10 @@ from urllib.request import ProxyHandler, build_opener
 
 
 def get_opener(proxy):
-    proxy_handler = ProxyHandler(proxy)
+    try:
+        proxy_handler = ProxyHandler(proxy)
+    except Exception:
+        return None
     return build_opener(proxy_handler)
 
 
@@ -29,12 +32,25 @@ def get_response(req_or_url, opener = None, timeout = socket._GLOBAL_DEFAULT_TIM
             return False
 
 
+def urllib_open(req_or_url, proxy = None, headers = {}, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
+    if isinstance(proxy, str):
+        try:
+            proxy = eval(proxy)
+            if isinstance(proxy, dict):
+                return None
+        except Exception:
+            return None
+    opener = get_opener(proxy)
+
+    return get_html(req_or_url, opener, timeout)
+
+
 def decompress(data, encoding):
     if encoding == 'gzip':
         try:
             return zlib.decompress(data, zlib.MAX_WBITS | 16)
         except zlib.error:
-            return False
+            return None
     elif encoding == 'deflate':
         try:
             return zlib.decompress(data, -zlib.MAX_WBITS)
@@ -47,10 +63,10 @@ def decompress(data, encoding):
 def get_html(req_or_url, opener = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
     res = get_response(req_or_url, opener, timeout = timeout)
     if not res:
-        return False
+        return None
     html = decompress(res.read(), res.headers.get('Content-Encoding'))
     if not html:
-        return False
+        return None
     return html.decode('utf-8')
 
 

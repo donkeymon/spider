@@ -41,8 +41,7 @@ def get_headers():
         'DNT': 1,
         'Referer': 'https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=0&rsv_idx=1&tn=baidu&wd=%E8%B1%86%E7%93%A3%20%E6%9D%AD%E5%B7%9E%E7%A7%9F%E6%88%BF%E5%B0%8F%E7%BB%84&rsv_pq=dc4ab5760000d649&rsv_t=0dc0TLK5%2FGWiLLaM7UX284evhE8e8ZKlCz8k80aVXAZPo1TP4cG06X1wVgg&rqlang=cn&rsv_enter=1&rsv_sug3=31&rsv_sug1=27&rsv_sug7=100&rsv_sug2=0&inputT=3576&rsv_sug4=3577',
         'Accept-Encoding': 'br',
-        'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-US;q=0.7',
-        'Cookie': 'bid=J17yE_0QLd8; ap=1'
+        'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-US;q=0.7'
     }
 
 
@@ -85,7 +84,6 @@ def main():
             threads.append(Thread(target = get_zufang, args = (pattern, page + i, proxies)))
         for i in range(THREAD_NUMBER):
             threads[i].start()
-
     print('done')
 
 main()
