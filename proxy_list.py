@@ -1,5 +1,6 @@
 import base
 import requests
+import random
 import threading
 import multiprocessing
 from multiprocessing import Process, Pool
@@ -83,6 +84,11 @@ def read_proxies():
     proxies = proxies_line.split(',')
     proxies.pop()
     return proxies
+
+
+def random_proxy():
+    proxies = read_proxies()
+    return random.choice(proxies)
 
 
 def main():

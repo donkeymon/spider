@@ -3,12 +3,8 @@ import urllib
 import urllib.request
 import zlib
 import socket
+import random
 from urllib.request import ProxyHandler, build_opener
-
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36',
-    'Mozilla/5.0 (Linux; Android 7.1.1; MI 6 Build/NMF26X; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/66.0.3359.158 Mobile Safari/537.36'
-]
 
 
 def get_opener(proxy):
