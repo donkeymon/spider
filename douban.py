@@ -79,5 +79,3 @@ def main():
         for i in range(THREAD_NUMBER):
             threads[i].start()
     print('done')
-
-main()

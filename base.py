@@ -47,17 +47,16 @@ def proxy_str_to_dict(proxy):
 
 
 def decompress(data, encoding):
-    if encoding == 'gzip':
-        try:
+    try:
+        if encoding == 'gzip':
             return zlib.decompress(data, zlib.MAX_WBITS | 16)
-        except zlib.error:
-            return None
-    elif encoding == 'deflate':
-        try:
+        elif encoding == 'zlib':
+            return zlib.decompress(data, zlib.MAX_WBITS)
+        elif encoding == 'deflate':
             return zlib.decompress(data, -zlib.MAX_WBITS)
-        except zlib.error:
-            return zlib.decompress(data)
-    else:
+        else:
+            return data
+    except zlib.error:
         return data
 
 

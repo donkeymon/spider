@@ -3,6 +3,7 @@ import requests
 import random
 import threading
 import multiprocessing
+from fake_useragent import UserAgent
 from multiprocessing import Process, Pool
 from threading import Thread
 from urllib.request import ProxyHandler, build_opener
@@ -27,7 +28,7 @@ MAX_PAGE = 5
 
 def get_headers():
     return {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        'User-Agent': UserAgent().random
     }
 
 
