@@ -49,23 +49,17 @@ def get_pattern():
     return BASE_PATTERN.format(SPLITTER.join(KEY_WORDS))
 
 
-def get_zufang(pattern, page = 1, proxies = None):
-    if not proxies:
-        opener = None
-    else:
-        opener = base.get_opener(eval(random.choice(proxies)))
-
+def get_zufang(pattern, page = 1, proxy = None):
     url = BASE_URL + SUB_URL + 'start=' + str((page - 1) * 25)
-    headers = get_headers()
-    req = base.get_request(url, headers = headers)
+    req = base.get_request(url, headers = get_headers())
 
-    html = base.get_html(req, opener, TIMEOUT)
+    html = base.get_html(req, proxy, TIMEOUT)
     if not html:
-        return
+        return False
 
     match_result = base.get_match_result(pattern, html)
     if not match_result:
-        return
+        return False
 
     with open(FILE_NAME, 'a') as file_handler:
         for info in match_result:
@@ -81,7 +75,7 @@ def main():
     for page in range(START_PAGE, MAX_PAGE, THREAD_NUMBER):
         threads = []
         for i in range(THREAD_NUMBER):
-            threads.append(Thread(target = get_zufang, args = (pattern, page + i, proxies)))
+            threads.append(Thread(target = get_zufang, args = (pattern, page + i, eval(random.choice(proxies)))))
         for i in range(THREAD_NUMBER):
             threads[i].start()
     print('done')

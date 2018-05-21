@@ -32,7 +32,7 @@ def get_response(req_or_url, opener = None, timeout = socket._GLOBAL_DEFAULT_TIM
             return False
 
 
-def urllib_open(req_or_url, proxy = None, headers = {}, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
+def proxy_str_to_dict(proxy):
     if isinstance(proxy, str):
         try:
             proxy = eval(proxy)
@@ -40,9 +40,10 @@ def urllib_open(req_or_url, proxy = None, headers = {}, timeout = socket._GLOBAL
                 return None
         except Exception:
             return None
-    opener = get_opener(proxy)
-
-    return get_html(req_or_url, opener, timeout)
+    elif isinstance(proxy, dict):
+        return proxy
+    else:
+        return None
 
 
 def decompress(data, encoding):
@@ -60,7 +61,8 @@ def decompress(data, encoding):
         return data
 
 
-def get_html(req_or_url, opener = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
+def get_html(req_or_url, proxy = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
+    opener = get_opener(proxy_str_to_dict(proxy))
     res = get_response(req_or_url, opener, timeout = timeout)
     if not res:
         return None
