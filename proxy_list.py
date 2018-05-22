@@ -47,8 +47,13 @@ def get_proxies_by_page(page):
 
     headers = get_headers()
     url = BASE_URL.format(page)
-    request = base.get_request(url = url, headers = headers)
-    html = base.get_html(request)
+    
+    # urllib
+    # request = base.get_request(url = url, headers = headers)
+    # html = base.get_html(request)
+
+    # requests
+    html = requests.get(url, headers = headers).text
     match_result = base.get_match_result(PATTERN, html)
     for proxy in match_result:
         proxies.append({proxy[2].lower(): proxy[0] + ':' + proxy[1]})
@@ -58,25 +63,27 @@ def get_proxies_by_page(page):
 def is_good_proxy(proxy):
     check_url = 'https://www.ipip.net'
 
-    proxy_handler = ProxyHandler(proxy)
-    opener = build_opener(proxy_handler)
-    req = base.get_request(check_url, headers = get_headers())
-    try:
-        opener.open(req, timeout = GOOD_PROXY_TIMEOUT)
-    except URLError:
-        return False
-    except timeout:
-        return False
-    else:
-        return True
-
+    # urllib
+    # proxy_handler = ProxyHandler(proxy)
+    # opener = build_opener(proxy_handler)
+    # req = base.get_request(check_url, headers = get_headers())
     # try:
-    #     res = requests.get(check_url, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
-    #     res.raise_for_status()
-    # except Exception as e:
+    #     opener.open(req, timeout = GOOD_PROXY_TIMEOUT)
+    # except URLError:
+    #     return False
+    # except timeout:
     #     return False
     # else:
     #     return True
+
+    # requests
+    try:
+        res = requests.get(check_url, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
+        res.raise_for_status()
+    except Exception:
+        return False
+    else:
+        return True
 
 
 def read_proxies():
