@@ -52,6 +52,7 @@ def get_proxies_by_page(page, proxies):
     for proxy in match_result:
         file_handler.write(str(proxy) + ',')
         proxies.append({proxy[2].lower(): proxy[0] + ':' + proxy[1]})
+    file_handler.close()
     THREAD_LOCK.release()
 
 
