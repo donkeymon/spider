@@ -51,7 +51,7 @@ def get_proxies_by_page(page, proxies):
     file_handler = open(PROXY_FILE, 'a')
     for proxy in match_result:
         file_handler.write(str(proxy) + ',')
-        proxies.append({proxy[2] + ':' + proxy[0] + ':' + proxy[1]})
+        proxies.append({proxy[2].lower(): proxy[0] + ':' + proxy[1]})
     THREAD_LOCK.release()
 
 
@@ -94,7 +94,7 @@ def is_good_proxy(proxy):
         proxy_ip = (proxy.get('http') or proxy.get('https')).split(':')[0]
         if proxy_ip == detect_ip:
             THREAD_LOCK.acquire()
-            file_handler = open(PROXY_FILE, 'a')
+            file_handler = open(GOOD_PROXY_FILE, 'a')
             file_handler.write(str(proxy) + ',')
             file_handler.close()
             THREAD_LOCK.release()
@@ -120,13 +120,13 @@ def random_proxy():
 
 
 def main():
-    proxies = []
+    proxies = read_proxies()
 
-    # 单线程 [Finished in 579.6s]
+    # 单线程
     # for page in range(1, MAX_PAGE):
     #     get_good_proxies_by_page(page)
 
-    # 多线程 [Finished in 150.0s]
+    # 多线程
     for page in range(1, MAX_PAGE, THREAD_NUMBER):
         threads = []
         for i in range(THREAD_NUMBER):
@@ -135,16 +135,17 @@ def main():
             threads[i].start()
         for i in range(THREAD_NUMBER):
             threads[i].join()
+
     # for i in range(0, len(proxies), THREAD_NUMBER):
     #     threads = []
     #     for j in range(THREAD_NUMBER):
-    #         threads.append(Thread(target = is_good_proxy, args = (proxies[i + j],)))
+    #         threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
     #     for j in range(THREAD_NUMBER):
     #         threads[j].start()
     #     for j in range(THREAD_NUMBER):
     #         threads[j].join()
 
-    # 多进程  [Finished in 156.8s]
+    # 多进程
     # if __name__ == '__main__':
     #     for page in range(1, MAX_PAGE, PROCESS_NUMBER):
     #             processes = []
@@ -153,7 +154,7 @@ def main():
     #             for i in range(PROCESS_NUMBER):
     #                 processes[i].start()
 
-    # 多进程 进程池 [Finished in 156.2s]
+    # 多进程 进程池
     # if __name__ == '__main__':
     #     pool = Pool(4)
     #     for page in range(1, MAX_PAGE, PROCESS_NUMBER):
