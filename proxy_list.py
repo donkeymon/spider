@@ -79,7 +79,7 @@ def is_good_proxy(proxy):
 
     # requests
     try:
-        res = requests.get(base.TAOBAO_GET_IP_URL, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
+        res = requests.get(base.NET_CN_GET_IP_URL, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
         res.raise_for_status()
     except HTTPError:
         print('http_error, not good proxy ' + str(proxy))
@@ -90,8 +90,11 @@ def is_good_proxy(proxy):
     except ProxyError:
         print('proxy_error, not good proxy ' + str(proxy))
         return False
+    except Exception:
+        print('unknown error, not good proxy ' + str(proxy))
+        return False
     else:
-        detect_ip = res.json()['data'].get('ip')
+        detect_ip = re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
         proxy_ip = (proxy.get('http') or proxy.get('https')).split(':')[0]
         if proxy_ip == detect_ip:
             THREAD_LOCK.acquire()
@@ -121,30 +124,30 @@ def random_proxy():
 
 
 def main():
-    proxies = read_proxies()
-
     # 单线程
     # for page in range(1, MAX_PAGE):
     #     get_good_proxies_by_page(page)
 
     # 多线程
-    for page in range(1, MAX_PAGE, THREAD_NUMBER):
-        threads = []
-        for i in range(THREAD_NUMBER):
-            threads.append(Thread(target = get_proxies_by_page, args = (page + i, proxies)))
-        for i in range(THREAD_NUMBER):
-            threads[i].start()
-        for i in range(THREAD_NUMBER):
-            threads[i].join()
-
-    # for i in range(0, len(proxies), THREAD_NUMBER):
+    # proxies = []
+    # for page in range(1, MAX_PAGE, THREAD_NUMBER):
     #     threads = []
-    #     for j in range(THREAD_NUMBER):
-    #         threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
-    #     for j in range(THREAD_NUMBER):
-    #         threads[j].start()
-    #     for j in range(THREAD_NUMBER):
-    #         threads[j].join()
+    #     for i in range(THREAD_NUMBER):
+    #         threads.append(Thread(target = get_proxies_by_page, args = (page + i, proxies)))
+    #     for i in range(THREAD_NUMBER):
+    #         threads[i].start()
+    #     for i in range(THREAD_NUMBER):
+    #         threads[i].join()
+
+    proxies = read_proxies()
+    for i in range(0, len(proxies), THREAD_NUMBER):
+        threads = []
+        for j in range(THREAD_NUMBER):
+            threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
+        for j in range(THREAD_NUMBER):
+            threads[j].start()
+        for j in range(THREAD_NUMBER):
+            threads[j].join()
 
     # 多进程
     # if __name__ == '__main__':
