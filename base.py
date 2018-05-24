@@ -4,7 +4,17 @@ import urllib.request
 import zlib
 import socket
 import random
+import requests
+import socket
+import time
 from urllib.request import ProxyHandler, build_opener
+
+
+SOHU_GET_IP_URL = 'https://txt.go.sohu.com/ip/soip'
+TAOBAO_GET_IP_URL = 'http://ip.taobao.com/service/getIpInfo.php?ip=myip'
+NET_CN_GET_IP_URL = 'http://www.net.cn/static/customercare/yourip.asp'
+CHINAZ_GET_IP_URL = 'http://ip.chinaz.com/getip.aspx'
+JSONIP_GET_IP_URL = 'https://jsonip.com'
 
 
 def get_opener(proxy):
@@ -70,6 +80,38 @@ def get_html(req_or_url, proxy = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT)
         return None
     return html.decode('utf-8')
 
+def get_ip_info(proxy = None, field = 'ip'):
+    try:
+        res = requests.get(TAOBAO_GET_IP_URL, proxies = proxy)
+        res.raise_for_status()
+        return res.json()['data'].get(field)
+    except Exception:
+        pass
 
-def get_match_result(pattern, str):
-    return re.findall(pattern, str)
+    try:
+        res = requests.get(NET_CN_GET_IP_URL, proxies = proxy)
+        res.raise_for_status()
+        return re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
+    except Exception:
+        pass
+
+    try:
+        res = requests.get(CHINAZ_GET_IP_URL, proxies = proxy)
+        res.raise_for_status()
+        return re.findall("{0}:'([^,]+)'".format('ip'), res.text)[0]
+    except Exception:
+        pass
+
+    try:
+        res = requests.get(SOHU_GET_IP_URL, proxies = proxy)
+        res.raise_for_status()
+        return re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
+    except Exception:
+        pass
+
+    try:
+        res = requests.get(JSONIP_GET_IP_URL, proxies = proxy)
+        res.raise_for_status()
+        return res.json().get(field)
+    except Exception:
+        pass
