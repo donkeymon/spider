@@ -26,7 +26,7 @@ PATTERN = '''<td class=".*"><img src=".*" alt=".*" /></td>
 PROXY_FILE = 'proxy.txt'
 GOOD_PROXY_FILE = 'good_proxy.txt'
 GOOD_PROXY_TIMEOUT = 2
-MAX_PAGE = 4
+MAX_PAGE = 12
 
 THREAD_LOCK = threading.Lock()
 
@@ -135,14 +135,14 @@ def main():
             threads[i].start()
         for i in range(THREAD_NUMBER):
             threads[i].join()
-    for i in range(0, len(proxies), THREAD_NUMBER):
-        threads = []
-        for j in range(THREAD_NUMBER):
-            threads.append(Thread(target = is_good_proxy, args = (proxies[i + j],)))
-        for j in range(THREAD_NUMBER):
-            threads[j].start()
-        for j in range(THREAD_NUMBER):
-            threads[j].join()
+    # for i in range(0, len(proxies), THREAD_NUMBER):
+    #     threads = []
+    #     for j in range(THREAD_NUMBER):
+    #         threads.append(Thread(target = is_good_proxy, args = (proxies[i + j],)))
+    #     for j in range(THREAD_NUMBER):
+    #         threads[j].start()
+    #     for j in range(THREAD_NUMBER):
+    #         threads[j].join()
 
     # 多进程  [Finished in 156.8s]
     # if __name__ == '__main__':

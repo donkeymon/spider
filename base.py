@@ -80,18 +80,19 @@ def get_html(req_or_url, proxy = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT)
         return None
     return html.decode('utf-8')
 
-def get_ip_info(proxy = None, field = 'ip'):
-    try:
-        res = requests.get(TAOBAO_GET_IP_URL, proxies = proxy)
-        res.raise_for_status()
-        return res.json()['data'].get(field)
-    except Exception:
-        pass
 
+def get_ip_info(proxy = None, field = 'ip'):
     try:
         res = requests.get(NET_CN_GET_IP_URL, proxies = proxy)
         res.raise_for_status()
         return re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
+    except Exception:
+        pass
+
+    try:
+        res = requests.get(TAOBAO_GET_IP_URL, proxies = proxy)
+        res.raise_for_status()
+        return res.json()['data'].get(field)
     except Exception:
         pass
 
