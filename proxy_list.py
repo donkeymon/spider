@@ -50,7 +50,7 @@ def get_proxies_by_page(page, proxies):
     THREAD_LOCK.acquire()
     file_handler = open(PROXY_FILE, 'a')
     for proxy in match_result:
-        file_handler.write(str(proxy) + ',')
+        file_handler.write("{{'{0}': '{1}:{2}'}},".format(proxy[2].lower(), proxy[0], proxy[1]))
         proxies.append({proxy[2].lower(): proxy[0] + ':' + proxy[1]})
     file_handler.close()
     THREAD_LOCK.release()
@@ -107,10 +107,10 @@ def is_good_proxy(proxy):
 
 
 def read_proxies():
-    file_handler = open(PROXY_FILE, 'r')
-    proxies_line = file_handler.read()
-    proxies = proxies_line.split(',')
-    proxies.pop()
+    with open(PROXY_FILE, 'r') as file_handler:
+        proxies_line = file_handler.read()
+        proxies = proxies_line.split(',')
+        proxies.pop()
     file_handler.close()
     return proxies
 
@@ -163,5 +163,3 @@ def main():
     #             pool.apply_async(get_good_proxies_by_page, args = (page + i,))
     #     pool.close()
     #     pool.join()
-
-main()
