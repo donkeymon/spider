@@ -12,7 +12,7 @@ from urllib.request import ProxyHandler, build_opener
 from urllib.error import URLError
 from requests.exceptions import HTTPError, ConnectTimeout, ProxyError
 
-THREAD_NUMBER = 20
+THREAD_NUMBER = 40
 PROCESS_NUMBER = 4
 BASE_URL = 'http://www.xicidaili.com/nn/{0}'
 PATTERN = '''<td class=".*"><img src=".*" alt=".*" /></td>
@@ -25,9 +25,11 @@ PATTERN = '''<td class=".*"><img src=".*" alt=".*" /></td>
       <td>(.*)</td>'''
 
 PROXY_FILE = 'proxy.txt'
+WORK_PROXY_FILE = 'work_proxy.txt'
 GOOD_PROXY_FILE = 'good_proxy.txt'
-GOOD_PROXY_TIMEOUT = 5
-MAX_PAGE = 100
+WORK_PROXY_TIMEOUT = 5
+GOOD_PROXY_TIMEOUT = 3
+MAX_PAGE = 200
 
 THREAD_LOCK = threading.Lock()
 
@@ -57,64 +59,71 @@ def get_proxies_by_page(page, proxies):
     THREAD_LOCK.release()
 
 
-def is_good_proxy(proxy, good_proxies):
-    # urllib
-    # proxy_handler = ProxyHandler(proxy)
-    # opener = build_opener(proxy_handler)
-    # req = base.get_request(check_url, headers = get_headers())
-    # try:
-    #     opener.open(req, timeout = GOOD_PROXY_TIMEOUT)
-    # except URLError:
-    #     return False
-    # except timeout:
-    #     return False
-    # else:
-        # match_result = re.findall(check_pattern, res.text)
-        # detect_ip = match_result[0]
-        # proxy_match_result = re.findall(proxy_match_result, str(proxy))
-        # proxy_ip = proxy_match_result[0]
-        # if proxy_ip == detect_ip:
-        #     return True
-        # else:
-        #     return False
-
-    # requests
+def is_work_proxy(proxy, work_proxies = []):
     try:
-        res = requests.get(base.NET_CN_GET_IP_URL, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
+        res = requests.get(base.NET_CN_GET_IP_URL, get_headers(), proxies = proxy, timeout = WORK_PROXY_TIMEOUT)
         res.raise_for_status()
     except HTTPError:
-        print('not good proxy ' + str(proxy) + ' http_error')
+        print('not work proxy ' + str(proxy) + ' http_error')
         return False
     except ConnectTimeout:
-        print('not good proxy ' + str(proxy) + ' connect_timeout')
+        print('not work proxy ' + str(proxy) + ' connect_timeout')
         return False
     except ProxyError:
-        print('not good proxy ' + str(proxy) + ' proxy_error')
+        print('not work proxy ' + str(proxy) + ' proxy_error')
         return False
     except Exception:
-        print('not good proxy ' + str(proxy) + ' unknown error')
+        print('not work proxy ' + str(proxy) + ' unknown error')
         return False
     else:
-        find_detect_ip = re.findall('\d+\.\d+\.\d+\.\d+', res.text)
-        if not find_detect_ip:
-            print('detect ip error ' + str(proxy))
-            detect_ip = ''
-        else:
-            detect_ip = find_detect_ip[0]
+        THREAD_LOCK.acquire()
+        file_handler = open(WORK_PROXY_FILE, 'a')
+        file_handler.write(str(proxy) + ',')
+        file_handler.close()
+        work_proxies.append(proxy)
+        THREAD_LOCK.release()
+        print('is work proxy  ' + str(proxy))
+        return True
 
-        proxy_ip = (proxy.get('http') or proxy.get('https')).split(':')[0]
-        if proxy_ip == detect_ip:
-            THREAD_LOCK.acquire()
-            file_handler = open(GOOD_PROXY_FILE, 'a')
-            file_handler.write(str(proxy) + ',')
-            file_handler.close()
-            good_proxies.append(proxy)
-            THREAD_LOCK.release()
-            print('is good proxy  ' + str(proxy))
-            return True
+
+def is_good_proxy(proxy, good_proxies = []):
+    # 重试3次
+    get_ip_url = base.GET_IP_URL_MAP.get(0)
+    error_msg = ''
+    for i in range(3):
+        try:
+            res = requests.get(get_ip_url, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
+            res.raise_for_status()
+        except ConnectTimeout:
+            error_msg = 'connect_timeout'
+            pass
+        except Exception:
+            error_msg = 'unknown_error'
+            pass
         else:
-            print('not good proxy ' + str(proxy))
-            return False
+            find_detect_ip = re.findall('\d+\.\d+\.\d+\.\d+', res.text)
+            if not find_detect_ip:
+                error_msg = 'detect_ip_error'
+                get_ip_url = base.GET_IP_URL_MAP.get(i)
+                detect_ip = ''
+            else:
+                detect_ip = find_detect_ip[0]
+
+            proxy_ip = (proxy.get('http') or proxy.get('https')).split(':')[0]
+            if proxy_ip == detect_ip:
+                THREAD_LOCK.acquire()
+                file_handler = open(GOOD_PROXY_FILE, 'a')
+                file_handler.write(str(proxy) + ',')
+                file_handler.close()
+                good_proxies.append(proxy)
+                THREAD_LOCK.release()
+                print('is good proxy  {0}'.format(str(proxy)))
+                return True
+            else:
+                error_msg = 'not_through_proxy'
+
+    print('not good proxy {0} {1}'.format(str(proxy), error_msg))
+    return False
 
 
 def read_proxies(file_name):
@@ -132,6 +141,12 @@ def read_proxies(file_name):
 def random_proxy():
     proxies = read_proxies(GOOD_PROXY_FILE)
     return random.choice(proxies)
+
+
+def test_good_proxy():
+    good_proxies = read_proxies(GOOD_PROXY_FILE)
+    for proxy in good_proxies:
+        print('detect_ip: {0}   proxy: {1}'.format(base.get_ip_info(base.proxy_str_to_dict(proxy)), proxy))
 
 
 # def main():
@@ -154,7 +169,7 @@ def random_proxy():
     # for i in range(0, len(proxies), THREAD_NUMBER):
     #     threads = []
     #     for j in range(THREAD_NUMBER):
-    #         threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
+    #         threads.append(Thread(target = is_good_proxy, args = (base.proxy_str_to_dict(proxies[i + j]),)))
     #     for j in range(THREAD_NUMBER):
     #         threads[j].start()
     #     for j in range(THREAD_NUMBER):
@@ -179,10 +194,11 @@ def random_proxy():
     #     pool.join()
 
 def get_proxies_to_file(restart = False):
-    if restart and os.path.exists(PROXY_FILE):
-        os.unlink(PROXY_FILE)
-    else:
-        return read_proxies(PROXY_FILE)
+    if os.path.exists(PROXY_FILE):
+        if restart:
+            os.unlink(PROXY_FILE)
+        else:
+            return read_proxies(PROXY_FILE)
 
     proxies = []
     for page in range(1, MAX_PAGE, THREAD_NUMBER):
@@ -196,19 +212,42 @@ def get_proxies_to_file(restart = False):
             threads[i].join()
     return proxies
 
-def get_good_proxies_to_file(restart = False):
-    if restart and os.path.exists(GOOD_PROXY_FILE):
-        os.unlink(GOOD_PROXY_FILE)
-    else:
-        return read_proxies(GOOD_PROXY_FILE)
+
+def get_work_proxies_to_file(restart = False):
+    if os.path.exists(WORK_PROXY_FILE):
+        if restart:
+            os.unlink(WORK_PROXY_FILE)
+        else:
+            return read_proxies(WORK_PROXY_FILE)
 
     proxies = read_proxies(PROXY_FILE)
-    good_proxies = []
+    work_proxies = []
     for i in range(0, len(proxies), THREAD_NUMBER):
         threads = []
         for j in range(THREAD_NUMBER):
             if i + j < len(proxies):
-                threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]), good_proxies)))
+                threads.append(Thread(target = is_work_proxy, args = (base.proxy_str_to_dict(proxies[i + j]), work_proxies)))
+        for j in range(len(threads)):
+            threads[j].start()
+        for j in range(len(threads)):
+            threads[j].join()
+    return work_proxies
+
+
+def get_good_proxies_to_file(restart = False):
+    if os.path.exists(GOOD_PROXY_FILE):
+        if restart:
+            os.unlink(GOOD_PROXY_FILE)
+        else:
+            return read_proxies(GOOD_PROXY_FILE)
+
+    work_proxies = read_proxies(WORK_PROXY_FILE)
+    good_proxies = []
+    for i in range(0, len(work_proxies), THREAD_NUMBER):
+        threads = []
+        for j in range(THREAD_NUMBER):
+            if i + j < len(work_proxies):
+                threads.append(Thread(target = is_good_proxy, args = (base.proxy_str_to_dict(work_proxies[i + j]), good_proxies)))
         for j in range(len(threads)):
             threads[j].start()
         for j in range(len(threads)):
@@ -216,4 +255,5 @@ def get_good_proxies_to_file(restart = False):
     return good_proxies
 
 get_proxies_to_file()
+get_work_proxies_to_file()
 get_good_proxies_to_file()
