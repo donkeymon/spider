@@ -29,7 +29,7 @@ WORK_PROXY_FILE = 'work_proxy.txt'
 GOOD_PROXY_FILE = 'good_proxy.txt'
 WORK_PROXY_TIMEOUT = 5
 GOOD_PROXY_TIMEOUT = 3
-MAX_PAGE = 200
+MAX_PAGE = 400
 
 THREAD_LOCK = threading.Lock()
 
