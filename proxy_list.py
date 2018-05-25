@@ -214,3 +214,6 @@ def get_good_proxies_to_file(restart = False):
         for j in range(len(threads)):
             threads[j].join()
     return good_proxies
+
+get_proxies_to_file()
+get_good_proxies_to_file()
