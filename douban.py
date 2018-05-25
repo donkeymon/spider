@@ -3,6 +3,8 @@ import time
 import base
 import proxy_list
 import requests
+import re
+import threading
 from fake_useragent import UserAgent
 from threading import Thread
 from urllib.request import ProxyHandler, build_opener
@@ -31,6 +33,7 @@ FILE_NAME = '租房.txt'
 TIMEOUT = 3
 
 THREAD_NUMBER = 4
+THREAD_LOCK = threading.Lock()
 
 def get_headers():
     return {
@@ -50,7 +53,17 @@ def get_pattern():
     return BASE_PATTERN.format(SPLITTER.join(KEY_WORDS))
 
 
-def get_zufang(pattern, page = 1, proxy = None):
+def get_zufang(pattern, proxies, page = 1):
+    proxy = eval(random.choice(proxies))
+    if not get_zufang_by_page(pattern, proxy, page):
+        #所有proxy都重试一遍
+        for proxy in proxies:
+            proxy = eval(proxy)
+            if get_zufang_by_page(pattern, proxy, page):
+                break
+
+
+def get_zufang_by_page(pattern, proxy = None, page = 1):
     url = BASE_URL + SUB_URL + 'start=' + str((page - 1) * 25)
 
     # urllib
@@ -68,26 +81,27 @@ def get_zufang(pattern, page = 1, proxy = None):
     except Exception:
         return False
 
-    match_result = base.get_match_result(pattern, html)
+    match_result = re.findall(pattern, html)
     if not match_result:
         return False
 
-    with open(FILE_NAME, 'a') as file_handler:
-        for info in match_result:
-            file_handler.write(info[0] + ' ' + info[1] + '\n')
-            print(str(status_code) + ' ' + str(page) + ' ' + info[0] + ' ' + info[1])
-        file_handler.close()
+    THREAD_LOCK.acquire()
+    file_handler = open(FILE_NAME, 'a', encoding = 'utf-8')
+    for info in match_result:
+        file_handler.write(info[0] + ' ' + info[1] + '\n')
+        print(str(status_code) + ' ' + str(page) + ' ' + info[0] + ' ' + info[1])
+    file_handler.close()
+    THREAD_LOCK.release()
+    return True
 
 
 def main():
     pattern = get_pattern()
-    proxies = proxy_list.read_proxies()
+    proxies = proxy_list.read_proxies(proxy_list.GOOD_PROXY_FILE)
 
     for page in range(START_PAGE, MAX_PAGE, THREAD_NUMBER):
         threads = []
         for i in range(THREAD_NUMBER):
-            threads.append(Thread(target = get_zufang, args = (pattern, page + i, eval(random.choice(proxies)))))
+            threads.append(Thread(target = get_zufang, args = (pattern, proxies, page + i)))
         for i in range(THREAD_NUMBER):
             threads[i].start()
-
-main()

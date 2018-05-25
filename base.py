@@ -8,6 +8,7 @@ import requests
 import socket
 import time
 from urllib.request import ProxyHandler, build_opener
+from fake_useragent import UserAgent
 
 
 SOHU_GET_IP_URL = 'https://txt.go.sohu.com/ip/soip'
@@ -16,6 +17,7 @@ NET_CN_GET_IP_URL = 'http://www.net.cn/static/customercare/yourip.asp'
 CHINAZ_GET_IP_URL = 'http://ip.chinaz.com/getip.aspx'
 JSONIP_GET_IP_URL = 'https://jsonip.com'
 
+DETECT_IP_TIMEOUT = 2
 
 def get_opener(proxy):
     try:
@@ -82,36 +84,40 @@ def get_html(req_or_url, proxy = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT)
 
 
 def get_ip_info(proxy = None, field = 'ip'):
+    headers = {
+        'User-Agent': UserAgent().random
+    }
+
     try:
-        res = requests.get(NET_CN_GET_IP_URL, proxies = proxy)
+        res = requests.get(NET_CN_GET_IP_URL, proxies = proxy, headers = headers, timeout = DETECT_IP_TIMEOUT)
         res.raise_for_status()
         return re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
     except Exception:
         pass
 
     try:
-        res = requests.get(TAOBAO_GET_IP_URL, proxies = proxy)
+        res = requests.get(TAOBAO_GET_IP_URL, proxies = proxy, headers = headers, timeout = DETECT_IP_TIMEOUT)
         res.raise_for_status()
         return res.json()['data'].get(field)
     except Exception:
         pass
 
     try:
-        res = requests.get(CHINAZ_GET_IP_URL, proxies = proxy)
+        res = requests.get(CHINAZ_GET_IP_URL, proxies = proxy, headers = headers, timeout = DETECT_IP_TIMEOUT)
         res.raise_for_status()
         return re.findall("{0}:'([^,]+)'".format('ip'), res.text)[0]
     except Exception:
         pass
 
     try:
-        res = requests.get(SOHU_GET_IP_URL, proxies = proxy)
+        res = requests.get(SOHU_GET_IP_URL, proxies = proxy, headers = headers, timeout = DETECT_IP_TIMEOUT)
         res.raise_for_status()
         return re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
     except Exception:
         pass
 
     try:
-        res = requests.get(JSONIP_GET_IP_URL, proxies = proxy)
+        res = requests.get(JSONIP_GET_IP_URL, proxies = proxy, headers = headers, timeout = DETECT_IP_TIMEOUT)
         res.raise_for_status()
         return res.json().get(field)
     except Exception:
