@@ -26,7 +26,7 @@ PATTERN = '''<td class=".*"><img src=".*" alt=".*" /></td>
 PROXY_FILE = 'proxy.txt'
 GOOD_PROXY_FILE = 'good_proxy.txt'
 GOOD_PROXY_TIMEOUT = 2
-MAX_PAGE = 12
+MAX_PAGE = 100
 
 THREAD_LOCK = threading.Lock()
 
@@ -123,7 +123,7 @@ def random_proxy():
     return random.choice(proxies)
 
 
-def main():
+# def main():
     # 单线程
     # for page in range(1, MAX_PAGE):
     #     get_good_proxies_by_page(page)
@@ -139,15 +139,15 @@ def main():
     #     for i in range(THREAD_NUMBER):
     #         threads[i].join()
 
-    proxies = read_proxies()
-    for i in range(0, len(proxies), THREAD_NUMBER):
-        threads = []
-        for j in range(THREAD_NUMBER):
-            threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
-        for j in range(THREAD_NUMBER):
-            threads[j].start()
-        for j in range(THREAD_NUMBER):
-            threads[j].join()
+    # proxies = read_proxies()
+    # for i in range(0, len(proxies), THREAD_NUMBER):
+    #     threads = []
+    #     for j in range(THREAD_NUMBER):
+    #         threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
+    #     for j in range(THREAD_NUMBER):
+    #         threads[j].start()
+    #     for j in range(THREAD_NUMBER):
+    #         threads[j].join()
 
     # 多进程
     # if __name__ == '__main__':
@@ -166,3 +166,27 @@ def main():
     #             pool.apply_async(get_good_proxies_by_page, args = (page + i,))
     #     pool.close()
     #     pool.join()
+
+def get_proxies_to_file():
+    proxies = []
+    for page in range(1, MAX_PAGE, THREAD_NUMBER):
+        threads = []
+        for i in range(THREAD_NUMBER):
+            threads.append(Thread(target = get_proxies_by_page, args = (page + i, proxies)))
+        for i in range(THREAD_NUMBER):
+            threads[i].start()
+        for i in range(THREAD_NUMBER):
+            threads[i].join()
+
+def get_good_proxies_to_file():
+    proxies = read_proxies()
+    for i in range(0, len(proxies), THREAD_NUMBER):
+        threads = []
+        for j in range(THREAD_NUMBER):
+            threads.append(Thread(target = is_good_proxy, args = (eval(proxies[i + j]),)))
+        for j in range(THREAD_NUMBER):
+            threads[j].start()
+        for j in range(THREAD_NUMBER):
+            threads[j].join()
+
+get_proxies_to_file()
