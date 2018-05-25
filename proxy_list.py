@@ -188,5 +188,3 @@ def get_good_proxies_to_file():
             threads[j].start()
         for j in range(THREAD_NUMBER):
             threads[j].join()
-
-get_proxies_to_file()
