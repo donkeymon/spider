@@ -65,13 +65,6 @@ def get_zufang(pattern, proxies, page = 1):
 def get_zufang_by_page(pattern, proxy = None, page = 1):
     url = BASE_URL + SUB_URL + 'start=' + str((page - 1) * 25)
 
-    # urllib
-    # req = base.get_request(url, headers = get_headers())
-    # html = base.get_html(req, proxy, TIMEOUT)
-    # if not html:
-    #     return False
-
-    # requests
     try:
         res = requests.get(url, get_headers(), proxies = proxy)
         res.raise_for_status()
@@ -104,3 +97,5 @@ def main():
             threads.append(Thread(target = get_zufang, args = (pattern, proxies, page + i)))
         for i in range(THREAD_NUMBER):
             threads[i].start()
+
+main()

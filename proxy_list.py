@@ -87,11 +87,11 @@ def is_work_proxy(proxy, work_proxies = []):
 
 
 def is_good_proxy(proxy, good_proxies = []):
-    # 重试3次
     if proxy not in good_proxies:
         get_ip_url = base.GET_IP_URL_MAP.get(0)
         error_msg = ''
-        for i in range(3):
+        # 重试4次
+        for i in range(4):
             try:
                 res = requests.get(get_ip_url, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
                 res.raise_for_status()
