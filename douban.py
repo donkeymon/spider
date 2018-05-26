@@ -54,11 +54,10 @@ def get_pattern():
 
 
 def get_zufang(pattern, proxies, page = 1):
-    proxy = eval(random.choice(proxies))
+    proxy = random.choice(proxies)
     if not get_zufang_by_page(pattern, proxy, page):
         #所有proxy都重试一遍
         for proxy in proxies:
-            proxy = eval(proxy)
             if get_zufang_by_page(pattern, proxy, page):
                 break
 

@@ -51,13 +51,13 @@ def get_response(req_or_url, opener = None, timeout = socket._GLOBAL_DEFAULT_TIM
             return False
 
 
-def proxy_str_to_dict(proxy):
+def proxy_format(proxy):
     if isinstance(proxy, str):
         try:
             return eval(proxy)
         except Exception:
             return None
-    elif isinstance(proxy, dict):
+    elif isinstance(proxy, dict) and (proxy.get('http') or proxy.get('https')):
         return proxy
     else:
         return None
@@ -78,7 +78,7 @@ def decompress(data, encoding):
 
 
 def get_html(req_or_url, proxy = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
-    opener = get_opener(proxy_str_to_dict(proxy))
+    opener = get_opener(proxy_format(proxy))
     res = get_response(req_or_url, opener, timeout = timeout)
     if not res:
         return None
