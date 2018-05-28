@@ -63,11 +63,11 @@ def proxy_format(proxy):
 
 def decompress(data, encoding):
     try:
-        if encoding == 'gzip':
+        if encoding is 'gzip':
             return zlib.decompress(data, zlib.MAX_WBITS | 16)
-        elif encoding == 'zlib':
+        elif encoding is 'zlib':
             return zlib.decompress(data, zlib.MAX_WBITS)
-        elif encoding == 'deflate':
+        elif encoding is 'deflate':
             return zlib.decompress(data, -zlib.MAX_WBITS)
         else:
             return data
@@ -91,28 +91,28 @@ def get_ip_info(proxy = None, fast_priority = None, timeout = DETECT_IP_TIMEOUT,
         'User-Agent': UserAgent().random
     }
 
-    if fast_priority == 1:
+    if fast_priority is 1:
         try:
             res = requests.get(NET_CN_GET_IP_URL, proxies = proxy, headers = headers, timeout = timeout)
             res.raise_for_status()
             return re.findall('\d+\.\d+\.\d+\.\d+', res.text)[0]
         except Exception:
             return ''
-    elif fast_priority == 2:
+    elif fast_priority is 2:
         try:
             res = requests.get(TAOBAO_GET_IP_URL, proxies = proxy, headers = headers, timeout = timeout)
             res.raise_for_status()
             return res.json()['data'].get(field)
         except Exception:
             return ''
-    elif fast_priority == 3:
+    elif fast_priority is 3:
         try:
             res = requests.get(CHINAZ_GET_IP_URL, proxies = proxy, headers = headers, timeout = timeout)
             res.raise_for_status()
             return re.findall("{0}:'([^,]+)'".format('ip'), res.text)[0]
         except Exception:
             return ''
-    elif fast_priority == 4:
+    elif fast_priority is 4:
         try:
             res = requests.get(SOHU_GET_IP_URL, proxies = proxy, headers = headers, timeout = timeout)
             res.raise_for_status()
