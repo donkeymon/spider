@@ -27,7 +27,7 @@ BASE_PATTERN = '''<a href="(.*)" title="(.*)" class="">
                     </a>'''
 
 START_PAGE = 1
-MAX_PAGE = 400
+MAX_PAGE = 4000
 PAGE_SIZE = 25
 FILE_NAME = '租房.txt'
 TIMEOUT = 3
@@ -58,8 +58,11 @@ def get_zufang(pattern, proxies, page = 1):
     if not get_zufang_by_page(pattern, proxy, page):
         #所有proxy都重试一遍
         for proxy in proxies:
-            if get_zufang_by_page(pattern, proxy, page):
+            result = get_zufang_by_page(pattern, proxy, page)
+            if result[0] is False:
                 break
+            else:
+                print(result[1])
 
 
 def get_zufang_by_page(pattern, proxy = None, page = 1):
@@ -70,12 +73,12 @@ def get_zufang_by_page(pattern, proxy = None, page = 1):
         res.raise_for_status()
         status_code = res.status_code
         html = res.text
-    except Exception:
-        return False
+    except Exception as e:
+        return False, e
 
     match_result = re.findall(pattern, html)
     if not match_result:
-        return False
+        return []
 
     THREAD_LOCK.acquire()
     file_handler = open(FILE_NAME, 'a', encoding = 'utf-8')
