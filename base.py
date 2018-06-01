@@ -24,68 +24,6 @@ GET_IP_URL_MAP = {
 
 DETECT_IP_TIMEOUT = 2
 
-def get_opener(proxy):
-    try:
-        proxy_handler = ProxyHandler(proxy)
-    except Exception:
-        return None
-    return build_opener(proxy_handler)
-
-
-def get_request(url, data = None, headers = {}):
-    return urllib.request.Request(url = url, data = data, headers = headers)
-
-
-def get_response(req_or_url, opener = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
-    if opener:
-        try:
-            return opener.open(req_or_url, timeout = timeout)
-        except Exception:
-            return False
-    else:
-        try:
-            return urllib.request.urlopen(req_or_url, timeout = timeout)
-        except Exception:
-            return False
-
-
-def proxy_format(proxy):
-    if isinstance(proxy, str):
-        try:
-            return eval(proxy)
-        except Exception:
-            return None
-    elif isinstance(proxy, dict) and (proxy.get('http') or proxy.get('https')):
-        return proxy
-    else:
-        return None
-
-
-def decompress(data, encoding):
-    try:
-        if encoding is 'gzip':
-            return zlib.decompress(data, zlib.MAX_WBITS | 16)
-        elif encoding is 'zlib':
-            return zlib.decompress(data, zlib.MAX_WBITS)
-        elif encoding is 'deflate':
-            return zlib.decompress(data, -zlib.MAX_WBITS)
-        else:
-            return data
-    except zlib.error:
-        return data
-
-
-def get_html(req_or_url, proxy = None, timeout = socket._GLOBAL_DEFAULT_TIMEOUT):
-    opener = get_opener(proxy_format(proxy))
-    res = get_response(req_or_url, opener, timeout = timeout)
-    if not res:
-        return None
-    html = decompress(res.read(), res.headers.get('Content-Encoding'))
-    if not html:
-        return None
-    return html.decode('utf-8')
-
-
 def get_ip_info(proxy = None, fast_priority = None, timeout = DETECT_IP_TIMEOUT, field = 'ip'):
     headers = {
         'User-Agent': UserAgent().random

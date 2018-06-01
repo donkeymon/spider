@@ -2,351 +2,271 @@ import base
 import requests
 import random
 import threading
-import multiprocessing
 import re
-import os
+import time
 from fake_useragent import UserAgent
-from multiprocessing import Process, Pool
 from threading import Thread
-from urllib.request import ProxyHandler, build_opener
-from urllib.error import URLError
 from requests.exceptions import HTTPError, ConnectTimeout, ProxyError
 
 
-THREAD_NUMBER = 40
-PROCESS_NUMBER = 4
 PROXY_SITES = [
     {
         'method': 'GET',
-        'base_url': 'https://www.kuaidaili.com/free/inha/{0}/',
-        'pattern': '<tr>\\s*<td data-title="IP">(\\d+.\\d+.\\d+.\\d+)</td>\\s*<td data-title="PORT">(\\d+)</td>\\s*<td data-title="\\w+">\\w+</td>\\s*<td data-title="\\w+">(\\w+)</td>',
-        'reg_sort': [2, 0, 1],
-        'max_page': 20,
-        'callbefore': 'get_before_handle',
-        'callback': 'common_proxy_handle'
-    },
-    {
-        'method': 'GET',
         'base_url': 'http://www.xicidaili.com/nn/{0}',
-        'pattern': '<td>(\\d+.\\d+.\\d+.\\d)</td>\\s*<td>(\\d+)</td>\\s*<td>\\s*<a href="[\\w/]">\\w+</a>\\s*</td>\\s*<td class="\\w+">\\w+</td>\\s*<td>(\\w+)</td>',
+        'pattern': '<td>(\\d+.\\d+.\\d+.\\d+)</td>\\s*<td>(\\d+)</td>\\s*<td>\\s*<a href="[\\w\\-\\/]+">\\w+</a>\\s*</td>\\s*<td class="\\w+">\\w+</td>\\s*<td>(http|https|HTTP|HTTPS)</td>',
         'reg_sort': [2, 0, 1],
-        'max_page': 20,
-        'callbefore': 'get_before_handle',
-        'callback': 'common_proxy_handle'
+        'max_page': 4,
+        'thread_number': 4,
+        'proxy_to_file': False,
+        'work_proxy_to_file': False,
+        'good_proxy_to_file': True,
+        'file_content_spliter': ','
     },
     {
         'method': 'POST',
         'base_url': 'https://www.proxydocker.com/zh/proxylist/country/China',
-        'pattern': '',
+        'pattern': '<td>\\s*<a href="[\\/:\\.\\w]+">(\\d+.\\d+.\\d+.\\d+)</a>\\s*:(\\d+)\\s*</td>\\s*<td class="[\\w\-]+">\\s*(http|https|HTTP|HTTPS)\\s*</td>',
+        'reg_sort': [2, 0, 1],
         'max_page': 40,
-        'callbefore': 'post_before_handle',
-        'callback': 'common_proxy_handle'
+        'thread_number': 4,
+        'proxy_to_file': False,
+        'work_proxy_to_file': False,
+        'good_proxy_to_file': True,
+        'file_content_spliter': ',',
+        'cookie': '__tawkuuid=e::proxydocker.com::r04oTuigKvBUDZ2kO7ls/J8Yh9CDrVMsm26SQxS+xp+wvWyWCGnELlpFdFs1lT9/::2; REMEMBERME=TWFpbkJ1bmRsZVxFbnRpdHlcVXNlcjpaRzl1YTJWNWJXOXU6MTUyNzkxMjU3Mjo2ZWE4YTQ2ODU3ODYwNGYzZThlY2E2M2EzODJjYjQxZDgyNDJkNWU0MDJiMTc3OWEyMGU1NmZhNGUyODkxMTYw; PHPSESSID=837e3dda37a5e311405969fc7f101a24; TawkConnectionTime=0'
     },
     {
         'method': 'GET',
         'base_url': 'http://www.data5u.com/free/gngn/index.shtml',
-        'pattern': '',
+        'pattern': '<span>\\s*<li>(\\d+.\\d+.\\d+.\\d+)</li>\\s*</span>\\s*<span style="[:;\\w ]+">\\s*<li class="[\\w ]+">(\\d+)</li>\\s*</span>\\s*<span style="[:;\\w ]+">\\s*<li>\\s*<a class="\\w+" href="[\\.:\/\\w]+">\\w+</a>\\s*</li>\\s*</span>\\s*<span style="[:;\\w ]+">\\s*<li>\\s*<a class="\\w+" href="[\\.:\/\\w]+">(http|https|HTTP|HTTPS)</a>\\s*</li>\\s*</span>',
+        'reg_sort': [2, 0, 1],
         'max_page': 1,
-        'callbefore': 'get_before_handle',
-        'callback': 'common_proxy_handle'
+        'thread_number': 4,
+        'proxy_to_file': False,
+        'work_proxy_to_file': False,
+        'good_proxy_to_file': True,
+        'file_content_spliter': ','
     },
     {
         'method': 'GET',
         'base_url': 'http://www.data5u.com/free/gnpt/index.shtml',
-        'pattern': '',
+        'pattern': '<span>\\s*<li>(\\d+.\\d+.\\d+.\\d+)</li>\\s*</span>\\s*<span style="[:;\\w ]+">\\s*<li class="[\\w ]+">(\\d+)</li>\\s*</span>\\s*<span style="[:;\\w ]+">\\s*<li>\\s*<a class="\\w+" href="[\\.:\/\\w]+">\\w+</a>\\s*</li>\\s*</span>\\s*<span style="[:;\\w ]+">\\s*<li>\\s*<a class="\\w+" href="[\\.:\/\\w]+">(http|https|HTTP|HTTPS)</a>\\s*</li>\\s*</span>',
+        'reg_sort': [2, 0, 1],
         'max_page': 1,
-        'callbefore': 'get_before_handle',
-        'callback': 'common_proxy_handle'
+        'thread_number': 4,
+        'proxy_to_file': False,
+        'work_proxy_to_file': False,
+        'good_proxy_to_file': True,
+        'file_content_spliter': ','
     },
-    # {    需要图片识别
-    #     'method': 'GET',
-    #     'base_url': 'https://proxy.mimvp.com/free.php?proxy=in_hp&sort=&page=1',
-    #     'pattern': '',
-    #     'max_page': 1,
-    #     'callback': 'handle_mimvp_proxy'
-    # }
+    {
+        'method': 'GET',
+        'base_url': 'https://www.kuaidaili.com/free/inha/{0}/',
+        'pattern': '<tr>\\s*<td data-title="IP">(\\d+.\\d+.\\d+.\\d+)</td>\\s*<td data-title="PORT">(\\d+)</td>\\s*<td data-title="\\w+">\\w+</td>\\s*<td data-title="\\w+">(http|https|HTTP|HTTPS)</td>',
+        'reg_sort': [2, 0, 1],
+        'max_page': 4,
+        'thread_number': 4,
+        'proxy_to_file': False,
+        'work_proxy_to_file': False,
+        'good_proxy_to_file': True,
+        'file_content_spliter': ',',
+        'cookie': 'channelid=0; sid=1527810745853105'
+    }
 ]
-PROXY_FILE = 'proxy.txt'
-WORK_PROXY_FILE = 'work_proxy.txt'
-GOOD_PROXY_FILE = 'good_proxy.txt'
-WORK_PROXY_TIMEOUT = 5
-GOOD_PROXY_TIMEOUT = 3
-MAX_PAGE = 20
-
-THREAD_LOCK = threading.Lock()
 
 
 class ProxySite(object):
-    def __init__(self, method, base_url, pattern, reg_sort, max_page, thread_number = 4):
-        self.method = method.upper()
-        self.base_url = base_url
-        self.pattern = pattern
-        self.reg_sort = reg_sort
-        self.max_page = max_page
+    def __init__(self, proxy_site, work_proxy_timeout = 5, good_proxy_timeout = 3, proxy_to_file = False, work_proxy_to_file = False, good_proxy_to_file = True, file_content_spliter = ',', thread_number = 4):
+        self.proxy_site = proxy_site
+        self.method = proxy_site.get('method').upper()
+        self.base_url = proxy_site.get('base_url')
+        self.pattern = proxy_site.get('pattern')
+        self.reg_sort = proxy_site.get('reg_sort')
+        self.max_page = proxy_site.get('max_page')
+        self.cookie = proxy_site.get('cookie') or ''
+        self.work_proxy_timeout = proxy_site.get('work_proxy_timeout') or work_proxy_timeout
+        self.good_proxy_timeout = proxy_site.get('good_proxy_timeout') or good_proxy_timeout
+        self.proxy_to_file = proxy_site.get('proxy_to_file') or proxy_to_file
+        self.work_proxy_to_file = proxy_site.get('work_proxy_to_file') or work_proxy_to_file
+        self.good_proxy_to_file = proxy_site.get('good_proxy_to_file') or good_proxy_to_file
+        self.file_content_spliter = proxy_site.get('file_content_spliter') or file_content_spliter
+        self.thread_number = thread_number
         self.proxies = []
         self.work_proxies = []
         self.good_proxies = []
         self.user_agent_generator = UserAgent()
-        self.thread_number = thread_number
         self.thread_lock = threading.Lock()
+        self.request_page_done = 0
+        self.filter_proxy_done = 0
+        self.filter_work_proxy_done = 0
+        self.proxy_file = 'proxy.txt'
+        self.work_proxy_file = 'work_proxy.txt'
+        self.good_proxy_file = 'good_proxy.txt'
 
     def get_headers(self):
         return {
-            'User-Agent': self.user_agent_generator.random
+            'User-Agent': self.user_agent_generator.random,
+            'Cookie': self.cookie,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'DNT': '1',
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'en,zh-CN;q=0.9,zh;q=0.8,en-US;q=0.7'
         }
 
     def request(self, page):
         url = self.base_url.format(page)
-        if self.method == 'GET':
-            return requests.get(url, headers = self.get_headers()).text
-        elif self.method == 'POST':
-            data = {
-                'page': page
-            }
-            return requests.post(url, headers = self.get_headers(), data = data).text
+        try:
+            if self.method == 'GET':
+                return requests.get(url, headers = self.get_headers()).text
+            elif self.method == 'POST':
+                data = {
+                    'page': page
+                }
+                return requests.post(url, headers = self.get_headers(), data = data).text
+        except Exception:
+            return ''
+
+    def format_match_proxy(self, proxy):
+        return {proxy[self.reg_sort[0]].lower(): "{0}:{1}".format(proxy[self.reg_sort[1]], proxy[self.reg_sort[2]])}
 
     def match(self, html):
-        self.thread_lock.acquire()
         match_list = (re.findall(self.pattern, html))
         for proxy in match_list:
-            self.proxies.append({proxy[self.reg_sort[0]]: "{0}:{1}".format(proxy[self.reg_sort[1]], proxy[self.reg_sort[2]])})
-            print({proxy[self.reg_sort[0]]: "{0}:{1}".format(proxy[self.reg_sort[1]], proxy[self.reg_sort[2]])})
-        self.thread_lock.release()
+            self.proxies.append(self.format_match_proxy(proxy))
+            print(self.format_match_proxy(proxy))
+        self.request_page_done += 1
 
     def request_proxy_by_page(self, page):
         html = self.request(page)
         self.match(html)
 
-    def start_fuck(self):
-        for page in range(1, self.max_page, self.thread_number):
+    def request_proxy(self):
+        for page in range(1, self.max_page + 1, self.thread_number):
             threads = []
             for i in range(self.thread_number):
-                threads.append(Thread(target = self.request_proxy_by_page, args = (page + i,)))
+                if page + i < self.max_page + 1:
+                    threads.append(Thread(target = self.request_proxy_by_page, args = (page + i,)))
             for i in range(len(threads)):
                 threads[i].start()
 
+    def filter_work_proxy(self):
+        while True:
+            if self.request_page_done < self.max_page:
+                time.sleep(1)
+                continue
+            else:
+                for i in range(0, len(self.proxies), self.thread_number):
+                    threads = []
+                    for j in range(self.thread_number):
+                        if i + j < len(self.proxies):
+                            threads.append(Thread(target = self.detect_work_proxy, args = (self.proxies[i + j],)))
+                    for j in range(len(threads)):
+                        threads[j].start()
+                break
 
-def get_headers():
-    return {
-        'User-Agent': UserAgent().random
-    }
+    def detect_work_proxy(self, proxy):
+        is_work, msg = self.is_work_proxy(proxy)
+        if is_work:
+            self.work_proxies.append(proxy)
+        print('{0} {1}'.format(str(proxy), msg))
+        self.filter_proxy_done += 1
 
-
-def get_proxies_by_page(page, proxy_site, proxies = []):
-    headers = get_headers()
-    url = base_url.format(page)
-
-    html = requests.get(url, headers = headers).text
-    match_result = re.findall(PATTERN, html)
-    THREAD_LOCK.acquire()
-    file_handler = open(PROXY_FILE, 'a')
-    for proxy in match_result:
-        file_handler.write("{{'{0}': '{1}:{2}'}},".format(proxy[2].lower(), proxy[0], proxy[1]))
-        proxies.append({proxy[2].lower(): proxy[0] + ':' + proxy[1]})
-    file_handler.close()
-    THREAD_LOCK.release()
-
-
-def is_work_proxy(proxy, work_proxies = []):
-    if proxy is not None:
+    def is_work_proxy(self, proxy):
         try:
-            res = requests.get(base.NET_CN_GET_IP_URL, get_headers(), proxies = proxy, timeout = WORK_PROXY_TIMEOUT)
+            res = requests.get(base.GET_IP_URL_MAP.get(0), headers = self.get_headers(), proxies = proxy, timeout = self.work_proxy_timeout)
             res.raise_for_status()
         except HTTPError:
-            print('not work proxy ' + str(proxy) + ' http_error')
-            return False
+            return False, 'http_error'
         except ConnectTimeout:
-            print('not work proxy ' + str(proxy) + ' connect_timeout')
-            return False
+            return False, 'connect_timeout'
         except ProxyError:
-            print('not work proxy ' + str(proxy) + ' proxy_error')
-            return False
+            return False, 'proxy_error'
         except Exception:
-            print('not work proxy ' + str(proxy) + ' unknown error')
-            return False
+            return False, 'unknown_error'
         else:
-            THREAD_LOCK.acquire()
-            file_handler = open(WORK_PROXY_FILE, 'a')
-            file_handler.write(str(proxy) + ',')
-            file_handler.close()
-            work_proxies.append(proxy)
-            THREAD_LOCK.release()
-            print('is work proxy  ' + str(proxy))
-            return True
+            return True, 'work_proxy'
 
+    def filter_good_proxy(self):
+        while True:
+            if self.filter_proxy_done < len(self.proxies):
+                time.sleep(1)
+                continue
+            else:
+                for i in range(0, len(self.work_proxies), self.thread_number):
+                    threads = []
+                    for j in range(self.thread_number):
+                        if i + j < len(self.work_proxies):
+                            threads.append(Thread(target = self.detect_good_proxy, args = (self.work_proxies[i + j],)))
+                    for j in range(len(threads)):
+                        threads[j].start()
+                break
 
-def is_good_proxy(proxy, good_proxies = []):
-    if proxy not in good_proxies and proxy is not None:
-        get_ip_url = base.GET_IP_URL_MAP.get(0)
+    def detect_good_proxy(self, proxy):
+        is_good, msg = self.is_good_proxy(proxy)
+        if is_good:
+            self.good_proxies.append(proxy)
+        print('{0} {1}'.format(str(proxy), msg))
+        self.filter_work_proxy_done += 1
+
+    def is_good_proxy(self, proxy):
         error_msg = ''
         # 重试4次
         for i in range(4):
             try:
-                res = requests.get(get_ip_url, get_headers(), proxies = proxy, timeout = GOOD_PROXY_TIMEOUT)
+                res = requests.get(base.GET_IP_URL_MAP.get(i), self.get_headers(), proxies = proxy, timeout = self.good_proxy_timeout)
                 res.raise_for_status()
             except ConnectTimeout:
                 error_msg = 'connect_timeout'
-                pass
+                continue
             except Exception:
                 error_msg = 'unknown_error'
-                pass
+                continue
             else:
-                find_detect_ip = re.findall('\d+\.\d+\.\d+\.\d+', res.text)
+                find_detect_ip = re.findall('\\d+.\\d+.\\d+.\\d+', res.text)
                 if not find_detect_ip:
                     error_msg = 'detect_ip_error'
-                    # 切换检测url
-                    get_ip_url = base.GET_IP_URL_MAP.get(i)
                     detect_ip = ''
                 else:
                     detect_ip = find_detect_ip[0]
 
                 proxy_ip = (proxy.get('http') or proxy.get('https')).split(':')[0]
                 if proxy_ip == detect_ip:
-                    THREAD_LOCK.acquire()
-                    file_handler = open(GOOD_PROXY_FILE, 'a')
-                    file_handler.write(str(proxy) + ',')
-                    file_handler.close()
-                    good_proxies.append(proxy)
-                    THREAD_LOCK.release()
-                    print('is good proxy  {0}'.format(str(proxy)))
-                    return True
+                    return True, 'good_proxy'
                 else:
                     error_msg = 'not_through_proxy'
 
-        print('not good proxy {0} {1}'.format(str(proxy), error_msg))
-        return False
+        return False, error_msg
 
-
-def read_proxies(file_name):
-    try:
-        file_handler = open(file_name, 'r')
-        proxies_line = file_handler.read()
-        proxies = proxies_line.split(',')
-        proxies.pop()
+    def write_proxy_to_file(self, proxies, file):
+        file_handler = open(file, 'a')
+        for proxy in proxies:
+            file_handler.write(str(proxy) + self.file_content_spliter)
         file_handler.close()
 
-        for i in range(len(proxies)):
-            proxies[i] = base.proxy_format(proxies[i])
-        return proxies
-    except Exception:
-        return []
+    def done_it(self):
+        while True:
+            if self.filter_work_proxy_done < len(self.work_proxies):
+                time.sleep(1)
+                continue
+            else:
+                if self.proxy_to_file:
+                    self.write_proxy_to_file(self.proxies, self.proxy_file)
+                if self.work_proxy_to_file:
+                    self.write_proxy_to_file(self.work_proxies, self.work_proxy_file)
+                if self.good_proxy_to_file:
+                    self.write_proxy_to_file(self.good_proxies, self.good_proxy_file)
+                print('proxies: {0}, work_proxies: {1}, good_proxies: {2}'.format(len(self.proxies), len(self.work_proxies), len(self.good_proxies)))
+                break
+
+    def start_fuck(self):
+        self.request_proxy()
+        self.filter_work_proxy()
+        self.filter_good_proxy()
+        self.done_it()
 
 
-def random_proxy():
-    proxies = read_proxies(GOOD_PROXY_FILE)
-    return random.choice(proxies)
+# for site in PROXY_SITES:
+#     proxy_site = ProxySite(site)
+#     proxy_site.start_fuck()
 
-
-def test_good_proxy():
-    good_proxies = read_proxies(GOOD_PROXY_FILE)
-    for proxy in good_proxies:
-        print('detect_ip: {0}   proxy: {1}'.format(base.get_ip_info(base.proxy_format(proxy)), proxy))
-
-
-# def main():
-    # 单线程
-    # for page in range(1, MAX_PAGE):
-    #     get_good_proxies_by_page(page)
-
-    # 多线程
-    # proxies = []
-    # for page in range(1, MAX_PAGE, THREAD_NUMBER):
-    #     threads = []
-    #     for i in range(THREAD_NUMBER):
-    #         threads.append(Thread(target = get_proxies_by_page, args = (page + i, proxies)))
-    #     for i in range(THREAD_NUMBER):
-    #         threads[i].start()
-    #     for i in range(THREAD_NUMBER):
-    #         threads[i].join()
-
-    # proxies = read_proxies(PROXY_FILE)
-    # for i in range(0, len(proxies), THREAD_NUMBER):
-    #     threads = []
-    #     for j in range(THREAD_NUMBER):
-    #         threads.append(Thread(target = is_good_proxy, args = (base.proxy_format(proxies[i + j]),)))
-    #     for j in range(THREAD_NUMBER):
-    #         threads[j].start()
-    #     for j in range(THREAD_NUMBER):
-    #         threads[j].join()
-
-    # 多进程
-    # if __name__ == '__main__':
-    #     for page in range(1, MAX_PAGE, PROCESS_NUMBER):
-    #             processes = []
-    #             for i in range(PROCESS_NUMBER):
-    #                 processes.append(Process(target = get_good_proxies_by_page, args = (page + i,)))
-    #             for i in range(PROCESS_NUMBER):
-    #                 processes[i].start()
-
-    # 多进程 进程池
-    # if __name__ == '__main__':
-    #     pool = Pool(4)
-    #     for page in range(1, MAX_PAGE, PROCESS_NUMBER):
-    #         for i in range(PROCESS_NUMBER):
-    #             pool.apply_async(get_good_proxies_by_page, args = (page + i,))
-    #     pool.close()
-    #     pool.join()
-
-# def get_proxies_to_file(restart = False, proxies = []):
-#     if os.path.exists(PROXY_FILE):
-#         if restart:
-#             os.unlink(PROXY_FILE)
-#         else:
-#             return read_proxies(PROXY_FILE)
-
-#     for proxy_site in PROXY_SITES:
-#         for page in range(1, proxy_site['max_page'], THREAD_NUMBER):
-#             threads = []
-#             for i in range(THREAD_NUMBER):
-#                 threads.append(Thread(target = get_proxies_by_page, args = (page + i, proxy_site, proxies))
-#             for i in range(len(threads)):
-#                 threads[i].start()
-    # for page in range(1, MAX_PAGE, THREAD_NUMBER):
-    #     threads = []
-    #     for i in range(THREAD_NUMBER):
-    #         if page + i <= MAX_PAGE:
-    #             threads.append(Thread(target = get_proxies_by_page, args = (page + i, proxies)))
-    #     for i in range(len(threads)):
-    #         threads[i].start()
-
-
-def get_work_proxies_to_file(restart = False, work_proxies = []):
-    if os.path.exists(WORK_PROXY_FILE):
-        if restart:
-            os.unlink(WORK_PROXY_FILE)
-        else:
-            return read_proxies(WORK_PROXY_FILE)
-
-    proxies = read_proxies(PROXY_FILE)
-    for i in range(0, len(proxies), THREAD_NUMBER):
-        threads = []
-        for j in range(THREAD_NUMBER):
-            if i + j < len(proxies):
-                threads.append(Thread(target = is_work_proxy, args = (base.proxy_format(proxies[i + j]), work_proxies)))
-        for j in range(len(threads)):
-            threads[j].start()
-
-
-def get_good_proxies_to_file(restart = True, good_proxies = []):
-    if os.path.exists(GOOD_PROXY_FILE):
-        if restart:
-            good_proxies = read_proxies(GOOD_PROXY_FILE)
-        else:
-            return read_proxies(GOOD_PROXY_FILE)
-
-    work_proxies = read_proxies(WORK_PROXY_FILE)
-    for i in range(0, len(work_proxies), THREAD_NUMBER):
-        threads = []
-        for j in range(THREAD_NUMBER):
-            if i + j < len(work_proxies):
-                threads.append(Thread(target = is_good_proxy, args = (base.proxy_format(work_proxies[i + j]), good_proxies)))
-        for j in range(len(threads)):
-            threads[j].start()
-
-
-# get_proxies_to_file()
-# get_work_proxies_to_file()
-# get_good_proxies_to_file()
-
-proxy_site = ProxySite(PROXY_SITES[0]['method'], PROXY_SITES[0]['base_url'], PROXY_SITES[0]['pattern'], PROXY_SITES[0]['reg_sort'], PROXY_SITES[0]['max_page'])
-proxy_site.start_fuck()
+ProxySite(PROXY_SITES[1]).start_fuck()
