@@ -22,7 +22,7 @@ GET_IP_URL_MAP = {
     3: SOHU_GET_IP_URL
 }
 
-DETECT_IP_TIMEOUT = 2
+DETECT_IP_TIMEOUT = 4
 
 def get_ip_info(proxy = None, fast_priority = None, timeout = DETECT_IP_TIMEOUT, field = 'ip'):
     headers = {

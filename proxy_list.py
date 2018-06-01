@@ -257,6 +257,13 @@ class ProxySite(object):
         self.good_proxies = good_proxies
         return good_proxies
 
+    def test_good_proxy(self):
+        good_proxies = self.read_good_proxy()
+        for proxy in good_proxies:
+            detect_ip = base.get_ip_info(proxy)
+            proxy_ip = (proxy.get('http') or proxy.get('https')).split(':')[0]
+            print('detect_ip: {0}    proxy_ip: {1}'.format(detect_ip, proxy_ip))
+
     def done_it(self):
         while True:
             if self.filter_work_proxy_done < len(self.work_proxies):
