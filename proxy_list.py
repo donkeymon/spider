@@ -76,9 +76,10 @@ PROXY_SITES = [
 
 
 class ProxySite(object):
-    def __init__(self, proxy_site, work_proxy_timeout = 5, good_proxy_timeout = 3, proxy_to_file = False, work_proxy_to_file = False, good_proxy_to_file = True, file_content_spliter = ',', thread_number = 4):
+
+    def __init__(self, proxy_site = {}, work_proxy_timeout = 5, good_proxy_timeout = 3, proxy_to_file = False, work_proxy_to_file = False, good_proxy_to_file = True, file_content_spliter = ',', thread_number = 4):
         self.proxy_site = proxy_site
-        self.method = proxy_site.get('method').upper()
+        self.method = proxy_site.get('method') and proxy_site.get('method').upper()
         self.base_url = proxy_site.get('base_url')
         self.pattern = proxy_site.get('pattern')
         self.reg_sort = proxy_site.get('reg_sort')
@@ -243,6 +244,14 @@ class ProxySite(object):
             file_handler.write(str(proxy) + self.file_content_spliter)
         file_handler.close()
 
+    def read_good_proxy(self):
+        file_handler = open(self.good_proxy_file, 'r')
+        file_content = file_handler.read()
+        good_proxies = file_content.split(self.file_content_spliter)
+        good_proxies.pop()
+        self.good_proxies = good_proxies
+        return good_proxies
+
     def done_it(self):
         while True:
             if self.filter_work_proxy_done < len(self.work_proxies):
@@ -265,8 +274,6 @@ class ProxySite(object):
         self.done_it()
 
 
-# for site in PROXY_SITES:
-#     proxy_site = ProxySite(site)
-#     proxy_site.start_fuck()
-
-ProxySite(PROXY_SITES[1]).start_fuck()
+for site in PROXY_SITES:
+    proxy_site = ProxySite(site)
+    proxy_site.start_fuck()
