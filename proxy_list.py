@@ -65,7 +65,8 @@ PROXY_SITES = [
         'pattern': '<tr>\\s*<td data-title="IP">(\\d+.\\d+.\\d+.\\d+)</td>\\s*<td data-title="PORT">(\\d+)</td>\\s*<td data-title="\\w+">\\w+</td>\\s*<td data-title="\\w+">(http|https|HTTP|HTTPS)</td>',
         'reg_sort': [2, 0, 1],
         'max_page': 4,
-        'thread_number': 4,
+        'thread_number': 1,
+        'req_interval': 1.5,
         'proxy_to_file': False,
         'work_proxy_to_file': False,
         'good_proxy_to_file': True,
@@ -77,7 +78,7 @@ PROXY_SITES = [
 
 class ProxySite(object):
 
-    def __init__(self, proxy_site = {}, work_proxy_timeout = 5, good_proxy_timeout = 3, proxy_to_file = False, work_proxy_to_file = False, good_proxy_to_file = True, file_content_spliter = ',', thread_number = 4):
+    def __init__(self, proxy_site = {}, work_proxy_timeout = 5, good_proxy_timeout = 3, proxy_to_file = False, work_proxy_to_file = False, good_proxy_to_file = True, file_content_spliter = ',', thread_number = 4, req_interval = 0):
         self.proxy_site = proxy_site
         self.method = proxy_site.get('method') and proxy_site.get('method').upper()
         self.base_url = proxy_site.get('base_url')
@@ -91,7 +92,8 @@ class ProxySite(object):
         self.work_proxy_to_file = proxy_site.get('work_proxy_to_file') or work_proxy_to_file
         self.good_proxy_to_file = proxy_site.get('good_proxy_to_file') or good_proxy_to_file
         self.file_content_spliter = proxy_site.get('file_content_spliter') or file_content_spliter
-        self.thread_number = thread_number
+        self.thread_number = proxy_site.get('thread_number') or thread_number
+        self.req_interval = proxy_site.get('req_interval') or req_interval
         self.proxies = []
         self.work_proxies = []
         self.good_proxies = []
@@ -118,7 +120,7 @@ class ProxySite(object):
         url = self.base_url.format(page)
         try:
             if self.method == 'GET':
-                return requests.get(url, headers = self.get_headers()).text
+                return requests.get(url, headers = self.get_headers(), verify = False).text
             elif self.method == 'POST':
                 data = {
                     'page': page
@@ -149,6 +151,7 @@ class ProxySite(object):
                     threads.append(Thread(target = self.request_proxy_by_page, args = (page + i,)))
             for i in range(len(threads)):
                 threads[i].start()
+                time.sleep(self.req_interval)
 
     def filter_work_proxy(self):
         while True:
@@ -249,6 +252,8 @@ class ProxySite(object):
         file_content = file_handler.read()
         good_proxies = file_content.split(self.file_content_spliter)
         good_proxies.pop()
+        for i in range(len(good_proxies)):
+            good_proxies[i] = eval(good_proxies[i])
         self.good_proxies = good_proxies
         return good_proxies
 
